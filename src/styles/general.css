@@ -19,6 +19,13 @@
     margin-top: 3px;
 }
 
+.texts {
+    color: #fff;
+    height: 100px;
+    width: 200px;
+    border: none;
+    background-color: #ffffff00;
+}
 
 
 /* Utility classes*/
