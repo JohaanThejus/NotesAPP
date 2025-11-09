@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { percentage } from "./helper/helper";
 import "../styles/Workspace.css";
 import "../styles/general.css";
@@ -13,10 +13,12 @@ interface Text {
 export default function Textarea() {
   const [texts, setTexts] = useState<Text[]>([]);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const dragStart = useRef<{ x: number; y: number; id: string } | null>(null);
   const offset = useRef({ x: 0, y: 0 });
   const workspaceRef = useRef<HTMLDivElement>(null);
 
   const percentum = percentage(screen.width, 25);
+  const DRAG_THRESHOLD = 5; // pixels to move before dragging starts
 
   const handleWorkspaceDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -34,7 +36,7 @@ export default function Textarea() {
         id,
         top,
         left,
-        content: "hello",
+        content: "",
       },
     ]);
     console.log(percentum);
@@ -48,12 +50,15 @@ export default function Textarea() {
     const target = e.target as HTMLTextAreaElement;
     const rect = target.getBoundingClientRect();
 
-    // 🧩 prevent drag when resizing (near bottom-right corner)
     const isNearResize =
       e.clientX > rect.right - 16 && e.clientY > rect.bottom - 16;
     if (isNearResize) return;
 
-    setDraggingId(id);
+    dragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      id,
+    };
     offset.current = {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
@@ -61,6 +66,16 @@ export default function Textarea() {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragStart.current && !draggingId) {
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance > DRAG_THRESHOLD) {
+        setDraggingId(dragStart.current.id);
+      }
+    }
+
     if (!draggingId || !workspaceRef.current) return;
 
     const rect = workspaceRef.current.getBoundingClientRect();
@@ -77,6 +92,12 @@ export default function Textarea() {
 
   const handleMouseUp = () => {
     setDraggingId(null);
+    dragStart.current = null;
+  };
+
+  const changeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    let content = (e.target as HTMLElement).textContent;
+    console.log(content)
   };
 
   return (
@@ -88,22 +109,27 @@ export default function Textarea() {
       onMouseUp={handleMouseUp}
     >
       {texts.map((text) => (
-        <textarea
-          key={text.id}
-          id={text.id}
-          style={{
-            position: "absolute",
-            top: `${text.top}px`,
-            left: `${text.left}px`,
-            cursor: "grab",
-            resize: "both",
-          }}
-          className="texts"
-          onMouseDown={(e) => handleMouseDown(e, text.id)}
-          defaultValue={text.content}
-          onDoubleClick={(e) => e.stopPropagation()}
-        />
+        <TextareaItem key={text.id} text={text}/>
       ))}
     </div>
   );
+  
+  function TextareaItem(props: {text: Text}) {
+    return (
+      <textarea
+          id={props.text.id}
+          style={{
+            position: "absolute",
+            top: `${props.text.top}px`,
+            left: `${props.text.left}px`,
+          }}
+          className="texts"
+          onMouseDown={(e) => handleMouseDown(e, props.text.id)}
+          defaultValue={props.text.content}
+          placeholder="..."
+          onChange={(e) => changeHandler(e)}
+          onDoubleClick={(e) => e.stopPropagation()}
+        />
+    );
+  }
 }

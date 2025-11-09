@@ -23,8 +23,11 @@
     color: #fff;
     height: 100px;
     width: 200px;
-    border: none;
     background-color: #ffffff00;
+    resize: none;
+    border-radius: 5px;
+    border-color: #ffffff15;
+    padding: 10px;
 }
 
 
