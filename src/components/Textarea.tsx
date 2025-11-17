@@ -1,7 +1,10 @@
 import React, { useState, useRef } from "react";
 import { percentage } from "./helper/helper";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faGear } from "@fortawesome/free-solid-svg-icons";
 import "../styles/Workspace.css";
 import "../styles/general.css";
+
 
 interface Text {
   id: string;
@@ -16,9 +19,8 @@ export default function Textarea() {
   const dragStart = useRef<{ x: number; y: number; id: string } | null>(null);
   const offset = useRef({ x: 0, y: 0 });
   const workspaceRef = useRef<HTMLDivElement>(null);
-
   const percentum = percentage(screen.width, 25);
-  const DRAG_THRESHOLD = 5; // pixels to move before dragging starts
+  const DRAG_THRESHOLD = 5;
 
   const handleWorkspaceDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -41,8 +43,15 @@ export default function Textarea() {
     ]);
     console.log(percentum);
   };
-
-  const handleMouseDown = (
+    
+  const saveContent = (id: string, content: string) => {
+    let text = texts.find(obj => obj.id == id);
+    if (text) {
+      text.content = content;
+      console.log(text.content)
+    }
+  };
+    const handleMouseDown = (
     e: React.MouseEvent<HTMLTextAreaElement>,
     id: string
   ) => {
@@ -66,29 +75,40 @@ export default function Textarea() {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (dragStart.current && !draggingId) {
-      const dx = e.clientX - dragStart.current.x;
-      const dy = e.clientY - dragStart.current.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      if (distance > DRAG_THRESHOLD) {
-        setDraggingId(dragStart.current.id);
-      }
+  if (dragStart.current && !draggingId) {
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance > DRAG_THRESHOLD) {
+      setDraggingId(dragStart.current.id);
     }
+  }
 
-    if (!draggingId || !workspaceRef.current) return;
+  if (!draggingId || !workspaceRef.current) return;
 
-    const rect = workspaceRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - offset.current.x;
-    const y = e.clientY - rect.top - offset.current.y;
+  const workspaceRect = workspaceRef.current.getBoundingClientRect();
 
-    setTexts((prev) =>
-      prev.map((t) =>
-        t.id === draggingId ? { ...t, top: y, left: x } : t
-      )
-    );
-    e.stopPropagation();
-  };
+  const textarea = document.getElementById(draggingId) as HTMLTextAreaElement;
+  if (!textarea) return;
+
+  const itemWidth = textarea.offsetWidth;
+  const itemHeight = textarea.offsetHeight;
+
+  let x = e.clientX - workspaceRect.left - offset.current.x;
+  let y = e.clientY - workspaceRect.top - offset.current.y;
+
+  x = Math.max(0, Math.min(x, workspaceRect.width - itemWidth));
+  y = Math.max(0, Math.min(y, workspaceRect.height - itemHeight));
+
+  setTexts((prev) =>
+    prev.map((t) =>
+      t.id === draggingId ? { ...t, top: y, left: x } : t
+    )
+  );
+
+  e.stopPropagation();
+};
 
   const handleMouseUp = () => {
     setDraggingId(null);
@@ -96,10 +116,11 @@ export default function Textarea() {
   };
 
   const changeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    let content = (e.target as HTMLElement).textContent;
-    console.log(content)
+    let id = (e.target as HTMLTextAreaElement).id;
+    let content = (e.target as HTMLTextAreaElement).value;
+    saveContent(id, content)
+    console.log(content, texts)
   };
-
   return (
     <div
       ref={workspaceRef}
@@ -109,27 +130,65 @@ export default function Textarea() {
       onMouseUp={handleMouseUp}
     >
       {texts.map((text) => (
-        <TextareaItem key={text.id} text={text}/>
+        <TextareaItem key={text.id} text={text} openMenuId={null} setOpenMenuId={function (_value: React.SetStateAction<string | null>): void {
+          throw new Error("Function not implemented.");
+        } }/>
       ))}
     </div>
   );
   
-  function TextareaItem(props: {text: Text}) {
-    return (
+  function TextareaItem({
+  text,
+  openMenuId,
+  setOpenMenuId
+}: {
+  text: Text;
+  openMenuId: string | null;
+  setOpenMenuId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  
+  const isOpen = openMenuId === text.id;
+
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // If this menu is already open → close it
+    if (isOpen) setOpenMenuId(null);
+    else setOpenMenuId(text.id); // Open this menu
+  };
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: `${text.top}px`,
+        left: `${text.left}px`,
+      }}
+    >
       <textarea
-          id={props.text.id}
-          style={{
-            position: "absolute",
-            top: `${props.text.top}px`,
-            left: `${props.text.left}px`,
-          }}
-          className="texts"
-          onMouseDown={(e) => handleMouseDown(e, props.text.id)}
-          defaultValue={props.text.content}
-          placeholder="..."
-          onChange={(e) => changeHandler(e)}
-          onDoubleClick={(e) => e.stopPropagation()}
-        />
-    );
-  }
+        id={text.id}
+        className="texts"
+        onMouseDown={(e) => handleMouseDown(e, text.id)}
+        defaultValue={text.content}
+        placeholder="..."
+        onChange={(e) => changeHandler(e)}
+        onDoubleClick={(e) => e.stopPropagation()}
+      />
+
+      <button
+        className="gear-icon"
+        onClick={toggleMenu}
+        onDoubleClick={(e) => e.stopPropagation()}
+        style={{
+          position: "absolute",
+          top: "6px",
+          right: "6px",
+          height: "16px",
+          width: "20px",
+        }}
+      >
+        <FontAwesomeIcon icon={faGear} className="icon" />
+      </button>
+    </div>
+  );
+}
 }

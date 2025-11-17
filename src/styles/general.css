@@ -29,7 +29,25 @@
     border-color: #ffffff15;
     padding: 10px;
 }
-
+.gear-icon {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background-color: #00000000;
+    outline: none;
+    border: none;
+    
+}
+.icon {
+    color: white
+}
+.listb {
+    height: 20px;
+    width: 70px;
+    background-color: #00000000;
+    outline: none;
+    border: none;
+}
 
 /* Utility classes*/
 .bottomed {
